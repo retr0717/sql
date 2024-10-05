@@ -6,7 +6,6 @@ CREATE TABLE student (
     category VARCHAR(10),
     district VARCHAR(50),
     state VARCHAR(50),
-    student_rank INT
 );
 
 -- Create the student_rank table
@@ -18,69 +17,129 @@ CREATE TABLE student_rank (
 );
 
 -- Insert sample data into the student table
-INSERT INTO student (roll_no, name, category, district, state, student_rank) VALUES
-(1, 'Alice', 'General', 'New York', 'NY', 1),
-(2, 'Bob', 'General', 'San Francisco', 'CA', 2),
-(3, 'Charlie', 'OBC', 'Chicago', 'IL', 1),
-(4, 'David', 'General', 'New York', 'NY', 1),
-(5, 'Eve', 'SC', 'Los Angeles', 'CA', 1),
-(6, 'Frank', 'OBC', 'New York', 'NY', 2),
-(7, 'Grace', 'ST', 'Dallas', 'TX', 3);
+INSERT INTO student (roll_no, name, category, district, state) VALUES
+(1, 'Alice', 'General', 'New York', 'NY'),
+(2, 'Bob', 'General', 'Los Angeles', 'CA'),
+(3, 'Charlie', 'OBC', 'Chicago', 'IL'),
+(4, 'David', 'General', 'New York', 'NY'),
+(5, 'Eve', 'SC', 'San Francisco', 'CA'),
+(6, 'Frank', 'OBC', 'Dallas', 'TX'),
+(7, 'Grace', 'ST', 'Austin', 'TX'),
+(8, 'Hank', 'General', 'Miami', 'FL'),
+(9, 'Ivy', 'OBC', 'Dallas', 'TX');
+
++---------+---------+----------+---------------+-------+
+| roll_no | name    | category | district      | state |
++---------+---------+----------+---------------+-------+
+|       1 | Alice   | General  | New York      | NY    |
+|       2 | Bob     | General  | Los Angeles   | CA    |
+|       3 | Charlie | OBC      | Chicago       | IL    |
+|       4 | David   | General  | New York      | NY    |
+|       5 | Eve     | SC       | San Francisco | CA    |
+|       6 | Frank   | OBC      | Dallas        | TX    |
+|       7 | Grace   | ST       | Austin        | TX    |
+|       8 | Hank    | General  | Miami         | FL    |
+|       9 | Ivy     | OBC      | Dallas        | TX    |
++---------+---------+----------+---------------+-------+
 
 -- Insert sample data into the student_rank table
+-- Insert records with same rank and different marks, and same marks with different ranks
 INSERT INTO student_rank (roll_no, mark, student_rank) VALUES
-(1, 95, 1),
-(2, 89, 2),
-(3, 92, 1),
-(4, 95, 1),
-(5, 85, 1),
-(6, 90, 2),
-(7, 80, 3);
+(1, 95, 1), 
+(2, 90, 2), 
+(3, 90, 1),  
+(4, 88, 1),  
+(5, 85, 1),  
+(6, 87, 2),  
+(7, 80, 3),  
+(8, 90, 1),  
+(9, 87, 2); 
 
-CREATE VIEW same_cat_rank4 AS
-SELECT s.*, sr.student_rank
++---------+------+--------------+
+| roll_no | mark | student_rank |
++---------+------+--------------+
+|       1 |   95 |            1 |
+|       2 |   90 |            2 |
+|       3 |   90 |            1 |
+|       4 |   88 |            1 |
+|       5 |   85 |            1 |
+|       6 |   87 |            2 |
+|       7 |   80 |            3 |
+|       8 |   90 |            1 |
+|       9 |   87 |            2 |
++---------+------+--------------+
+
+
+
+CREATE VIEW same_category_rank AS
+SELECT s.roll_no, s.name, s.category, s.district, s.state, sr.student_rank
 FROM student s
-JOIN student_rank sr ON sr.roll_no = s.roll_no
-WHERE (s.category, sr.student_rank, s.state) IN (
-    SELECT s1.category, sr1.student_rank, s1.state
-    FROM student s1
-    JOIN student_rank sr1 ON sr1.roll_no = s1.roll_no
-    GROUP BY s1.category, sr1.student_rank, s1.state
-    HAVING COUNT(*) > 1
+JOIN student_rank sr ON s.roll_no = sr.roll_no
+WHERE (s.category, sr.student_rank) IN (
+SELECT s1.category, sr1.student_rank
+FROM student s1
+JOIN student_rank sr1 ON s1.roll_no = sr1.roll_no
+GROUP BY s1.category, sr1.student_rank
+HAVING COUNT(*) > 1
 )
-ORDER BY s.category, sr.student_rank, s.state;
+ORDER BY s.category, sr.student_rank;
+
++---------+-------+----------+----------+-------+--------------+
+| roll_no | name  | category | district | state | student_rank |
++---------+-------+----------+----------+-------+--------------+
+|       1 | Alice | General  | New York | NY    |            1 |
+|       4 | David | General  | New York | NY    |            1 |
+|       8 | Hank  | General  | Miami    | FL    |            1 |
+|       6 | Frank | OBC      | Dallas   | TX    |            2 |
+|       9 | Ivy   | OBC      | Dallas   | TX    |            2 |
++---------+-------+----------+----------+-------+--------------+
 
 
 2)
-CREATE VIEW highest_rank_students AS
-SELECT s.roll_no, s.name, s.category, s.district, sr.student_rank
+
+CREATE VIEW highest_rank_per_category_state AS
+SELECT s.roll_no, s.name, s.category, s.district, s.state, sr.student_rank
 FROM student s
 JOIN student_rank sr ON s.roll_no = sr.roll_no
 JOIN (
-    SELECT s1.category, s1.state, MIN(sr1.student_rank) AS highest_rank
+    SELECT category, state, MIN(student_rank) AS highest_rank
     FROM student s1
     JOIN student_rank sr1 ON s1.roll_no = sr1.roll_no
     GROUP BY s1.category, s1.state
 ) AS highest_ranks
 ON s.category = highest_ranks.category
-AND sr.student_rank = highest_ranks.highest_rank
 AND s.state = highest_ranks.state
+AND sr.student_rank = highest_ranks.highest_rank
 ORDER BY s.state, s.category, sr.student_rank;
 
++---------+---------+----------+---------------+-------+--------------+
+| roll_no | name    | category | district      | state | student_rank |
++---------+---------+----------+---------------+-------+--------------+
+|       2 | Bob     | General  | Los Angeles   | CA    |            2 |
+|       5 | Eve     | SC       | San Francisco | CA    |            1 |
+|       8 | Hank    | General  | Miami         | FL    |            1 |
+|       3 | Charlie | OBC      | Chicago       | IL    |            1 |
+|       1 | Alice   | General  | New York      | NY    |            1 |
+|       4 | David   | General  | New York      | NY    |            1 |
+|       6 | Frank   | OBC      | Dallas        | TX    |            2 |
+|       9 | Ivy     | OBC      | Dallas        | TX    |            2 |
+|       7 | Grace   | ST       | Austin        | TX    |            3 |
++---------+---------+----------+---------------+-------+--------------+
 
 3)
+
 CREATE VIEW student_rank_categories AS
 SELECT s.name, 
        sr.mark, 
        sr.student_rank, 
+       s.state,
        CASE 
-           WHEN x.category = 1 THEN 'First Category: Same mark, different rank'
-           WHEN x.category = 2 THEN 'Second Category: Different mark, same rank'
+           WHEN x.category = 1 THEN 'Same mark, different rank'
+           WHEN x.category = 2 THEN 'Different mark, same rank'
        END AS status
 FROM student s
 JOIN student_rank sr ON s.roll_no = sr.roll_no
 JOIN (
-    -- First Category: Same mark, different rank
     SELECT sr1.roll_no, 1 AS category 
     FROM student_rank sr1
     JOIN student_rank sr2 ON sr1.mark = sr2.mark AND sr1.student_rank != sr2.student_rank
@@ -88,35 +147,71 @@ JOIN (
 
     UNION
 
-    -- Second Category: Different mark, same rank
     SELECT sr1.roll_no, 2 AS category 
     FROM student_rank sr1
     JOIN student_rank sr2 ON sr1.mark != sr2.mark AND sr1.student_rank = sr2.student_rank
     WHERE sr1.roll_no != sr2.roll_no
 ) x ON sr.roll_no = x.roll_no;
 
++---------+------+--------------+-------+---------------------------+
+| name    | mark | student_rank | state | status                    |
++---------+------+--------------+-------+---------------------------+
+| Alice   |   95 |            1 | NY    | Different mark, same rank |
+| Bob     |   90 |            2 | CA    | Same mark, different rank |
+| Bob     |   90 |            2 | CA    | Different mark, same rank |
+| Charlie |   90 |            1 | IL    | Same mark, different rank |
+| Charlie |   90 |            1 | IL    | Different mark, same rank |
+| David   |   88 |            1 | NY    | Different mark, same rank |
+| Eve     |   85 |            1 | CA    | Different mark, same rank |
+| Frank   |   87 |            2 | TX    | Different mark, same rank |
+| Hank    |   90 |            1 | FL    | Same mark, different rank |
+| Hank    |   90 |            1 | FL    | Different mark, same rank |
+| Ivy     |   87 |            2 | TX    | Different mark, same rank |
++---------+------+--------------+-------+---------------------------+
+
 
 4)
+
 CREATE VIEW category_performance AS
 SELECT category, AVG(sr.mark) AS avg_marks
 FROM student s
 JOIN student_rank sr ON s.roll_no = sr.roll_no
 GROUP BY category;
 
--- Highest performance
++----------+-----------+
+| category | avg_marks |
++----------+-----------+
+| General  |   90.7500 |
+| OBC      |   88.0000 |
+| SC       |   85.0000 |
+| ST       |   80.0000 |
++----------+-----------+
+
 SELECT category, avg_marks 
 FROM category_performance 
 ORDER BY avg_marks DESC 
 LIMIT 1;
 
--- Least performance
++----------+-----------+
+| category | avg_marks |
++----------+-----------+
+| General  |   90.7500 |
++----------+-----------+
+
 SELECT category, avg_marks 
 FROM category_performance 
 ORDER BY avg_marks ASC 
 LIMIT 1;
 
++----------+-----------+
+| category | avg_marks |
++----------+-----------+
+| ST       |   80.0000 |
++----------+-----------+
+
 
 5)
+
 CREATE VIEW below_average_categories AS
 WITH overall_average AS (
     SELECT AVG(avg_marks) AS avg_marks
@@ -133,4 +228,11 @@ JOIN student_rank sr ON s.roll_no = sr.roll_no
 GROUP BY category
 HAVING AVG(sr.mark) < (SELECT avg_marks FROM overall_average);
 
+
++----------+-----------+
+| category | avg_marks |
++----------+-----------+
+| SC       |   85.0000 |
+| ST       |   80.0000 |
++----------+-----------+
 
